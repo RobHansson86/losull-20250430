@@ -85,7 +85,8 @@ export default function BerakningsFormular() {
     setRows(updatedRows);
   };
 
-  const updateRow = (index, field, value) => {
+  const updateRow = (index: number, field: string, value: number | string) => {
+
     setRows((prev) =>
       prev.map((row, i) =>
         i === index
