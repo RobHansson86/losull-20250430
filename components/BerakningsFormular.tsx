@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 
-const priceData = {
+type InsulationType = "oppen" | "slutet0_45" | "slutet45_90";
+
+const priceData: Record<InsulationType, Record<number, number>> = {
   "oppen": {
     200: 156,
     250: 187.5,
@@ -61,7 +63,7 @@ const priceData = {
   }
 };
 
-const defaultThicknessMap = {
+const defaultThicknessMap: Record<InsulationType, number> = {
   oppen: 200,
   slutet0_45: 200,
   slutet45_90: 70
@@ -69,24 +71,27 @@ const defaultThicknessMap = {
 
 export default function BerakningsFormular() {
   const [rows, setRows] = useState([
-    { insulationType: "oppen", thickness: 200, area: 0 }
+    { insulationType: "oppen" as InsulationType, thickness: 200, area: 0 }
   ]);
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<null | {
+    bruttopris: number;
+    rabatt: number;
+    totaltExklMoms: number;
+    totaltInklMoms: number;
+  }>(null);
 
   const addRow = () => {
-    const insulationType = "oppen";
+    const insulationType: InsulationType = "oppen";
     setRows([...rows, { insulationType, thickness: defaultThicknessMap[insulationType], area: 0 }]);
   };
 
   const removeRow = (index: number) => {
-
     const updatedRows = rows.filter((_, i) => i !== index);
     setRows(updatedRows);
   };
 
   const updateRow = (index: number, field: string, value: number | string) => {
-
     setRows((prev) =>
       prev.map((row, i) =>
         i === index
@@ -99,7 +104,7 @@ export default function BerakningsFormular() {
     );
   };
 
-  const getPrice = (type, thickness) => {
+  const getPrice = (type: InsulationType, thickness: number): number => {
     return priceData[type]?.[thickness] || 0;
   };
 
@@ -143,7 +148,7 @@ export default function BerakningsFormular() {
                   <Select
                     onValueChange={(val) => {
                       updateRow(index, "insulationType", val);
-                      updateRow(index, "thickness", defaultThicknessMap[val]);
+                      updateRow(index, "thickness", defaultThicknessMap[val as InsulationType]);
                     }}
                     value={row.insulationType}
                   >
