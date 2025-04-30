@@ -7,6 +7,12 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/u
 
 type InsulationType = "oppen" | "slutet0_45" | "slutet45_90";
 
+type Row = {
+  insulationType: InsulationType;
+  thickness: number;
+  area: number;
+};
+
 const priceData: Record<InsulationType, Record<number, number>> = {
   "oppen": {
     200: 156,
@@ -70,10 +76,10 @@ const defaultThicknessMap: Record<InsulationType, number> = {
 };
 
 export default function BerakningsFormular() {
-  const [rows, setRows] = useState([
-    { insulationType: "oppen" as InsulationType, thickness: 200, area: 0 }
+  const [rows, setRows] = useState<Row[]>([
+    { insulationType: "oppen", thickness: 200, area: 0 }
   ]);
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [result, setResult] = useState<null | {
     bruttopris: number;
     rabatt: number;
@@ -83,7 +89,14 @@ export default function BerakningsFormular() {
 
   const addRow = () => {
     const insulationType: InsulationType = "oppen";
-    setRows([...rows, { insulationType, thickness: defaultThicknessMap[insulationType], area: 0 }]);
+    setRows([
+      ...rows,
+      {
+        insulationType,
+        thickness: defaultThicknessMap[insulationType],
+        area: 0
+      }
+    ]);
   };
 
   const removeRow = (index: number) => {
@@ -91,7 +104,11 @@ export default function BerakningsFormular() {
     setRows(updatedRows);
   };
 
-  const updateRow = (index: number, field: string, value: number | string) => {
+  const updateRow = (
+    index: number,
+    field: keyof Row,
+    value: number | string
+  ) => {
     setRows((prev) =>
       prev.map((row, i) =>
         i === index
@@ -111,7 +128,7 @@ export default function BerakningsFormular() {
   const calculate = () => {
     let bruttopris = 0;
 
-    rows.forEach(row => {
+    rows.forEach((row) => {
       const price = getPrice(row.insulationType, row.thickness);
       bruttopris += row.area * price;
     });
@@ -147,7 +164,7 @@ export default function BerakningsFormular() {
                   <Label>Typ av isolering</Label>
                   <Select
                     onValueChange={(val) => {
-                      updateRow(index, "insulationType", val);
+                      updateRow(index, "insulationType", val as InsulationType);
                       updateRow(index, "thickness", defaultThicknessMap[val as InsulationType]);
                     }}
                     value={row.insulationType}
@@ -183,7 +200,7 @@ export default function BerakningsFormular() {
                   <Label>Tjocklek (mm)</Label>
                   <Select
                     onValueChange={(val) => updateRow(index, "thickness", val)}
-                    value={String(row.thickness ?? "")}
+                    value={String(row.thickness)}
                   >
                     <SelectTrigger>
                       <span>{row.thickness} mm</span>
@@ -234,3 +251,4 @@ export default function BerakningsFormular() {
     </div>
   );
 }
+
