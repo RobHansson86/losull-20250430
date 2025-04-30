@@ -79,7 +79,8 @@ export default function BerakningsFormular() {
     setRows([...rows, { insulationType, thickness: defaultThicknessMap[insulationType], area: 0 }]);
   };
 
-  const removeRow = (index) => {
+  const removeRow = (index: number) => {
+
     const updatedRows = rows.filter((_, i) => i !== index);
     setRows(updatedRows);
   };
