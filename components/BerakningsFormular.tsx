@@ -3,9 +3,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-
-type InsulationType = "oppen" | "slutet0_45" | "slutet45_90";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+import { insulationData, InsulationType } from "@/lib/insulationData";
 
 type Row = {
   insulationType: InsulationType;
@@ -13,67 +17,10 @@ type Row = {
   area: number;
 };
 
-const priceData: Record<InsulationType, Record<number, number>> = {
-  "oppen": {
-    200: 156,
-    250: 187.5,
-    300: 225,
-    350: 262.5,
-    400: 240,
-    450: 270,
-    500: 300,
-    550: 330,
-    600: 360,
-    650: 390,
-    700: 420,
-    750: 450,
-    800: 480
-  },
-  "slutet0_45": {
-    200: 200.2,
-    220: 211.75,
-    250: 240.63,
-    300: 288.75,
-    350: 336.88,
-    400: 385,
-    450: 433.13,
-    500: 481.25,
-    550: 529.38,
-    600: 577.5,
-    650: 625.63,
-    700: 673.75,
-    750: 721.88,
-    800: 770
-  },
-  "slutet45_90": {
-    70: 86.24,
-    95: 117.04,
-    120: 147.84,
-    145: 159.5,
-    170: 187,
-    195: 214.5,
-    200: 220,
-    220: 242,
-    250: 275,
-    300: 330,
-    350: 385,
-    400: 440,
-    450: 495,
-    500: 550,
-    550: 605,
-    600: 660,
-    650: 715,
-    700: 770,
-    750: 825,
-    800: 880
-  }
-};
-
-const defaultThicknessMap: Record<InsulationType, number> = {
-  oppen: 200,
-  slutet0_45: 200,
-  slutet45_90: 70
-};
+const brand = insulationData.hunton;
+const defaultThicknessMap: Record<InsulationType, number> = Object.fromEntries(
+  Object.entries(brand.types).map(([key, data]) => [key, data.defaultThickness])
+) as Record<InsulationType, number>;
 
 export default function BerakningsFormular() {
   const [rows, setRows] = useState<Row[]>([
@@ -122,7 +69,7 @@ export default function BerakningsFormular() {
   };
 
   const getPrice = (type: InsulationType, thickness: number): number => {
-    return priceData[type]?.[thickness] || 0;
+    return brand.types[type]?.prices[thickness] || 0;
   };
 
   const calculate = () => {
@@ -170,18 +117,14 @@ export default function BerakningsFormular() {
                     value={row.insulationType}
                   >
                     <SelectTrigger>
-                      <span>
-                        {row.insulationType === "oppen"
-                          ? "Hunton Öppet Bjälklag"
-                          : row.insulationType === "slutet0_45"
-                          ? "Hunton Slutet 0–45°"
-                          : "Hunton Slutet 45–90°"}
-                      </span>
+                      <span>{brand.types[row.insulationType].name}</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="oppen">Hunton Öppet Bjälklag</SelectItem>
-                      <SelectItem value="slutet0_45">Hunton Slutet 0–45°</SelectItem>
-                      <SelectItem value="slutet45_90">Hunton Slutet 45–90°</SelectItem>
+                      {Object.entries(brand.types).map(([key, data]) => (
+                        <SelectItem key={key} value={key}>
+                          {data.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -206,8 +149,12 @@ export default function BerakningsFormular() {
                       <span>{row.thickness} mm</span>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(priceData[row.insulationType] || {}).map((t) => (
-                        <SelectItem key={t} value={t}>{t} mm</SelectItem>
+                      {Object.keys(
+                        brand.types[row.insulationType].prices || {}
+                      ).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t} mm
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
