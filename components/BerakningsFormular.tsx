@@ -3,99 +3,68 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-
-type InsulationType = "oppen" | "slutet0_45" | "slutet45_90";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem
+} from "@/components/ui/select";
+import {
+  insulationData,
+  Brand,
+  InsulationType,
+  getTypeLabel
+} from "@/lib/insulationData";
 
 type Row = {
+  brand: Brand;
   insulationType: InsulationType;
   thickness: number;
   area: number;
 };
 
-const priceData: Record<InsulationType, Record<number, number>> = {
-  "oppen": {
-    200: 156,
-    250: 187.5,
-    300: 225,
-    350: 262.5,
-    400: 240,
-    450: 270,
-    500: 300,
-    550: 330,
-    600: 360,
-    650: 390,
-    700: 420,
-    750: 450,
-    800: 480
-  },
-  "slutet0_45": {
-    200: 200.2,
-    220: 211.75,
-    250: 240.63,
-    300: 288.75,
-    350: 336.88,
-    400: 385,
-    450: 433.13,
-    500: 481.25,
-    550: 529.38,
-    600: 577.5,
-    650: 625.63,
-    700: 673.75,
-    750: 721.88,
-    800: 770
-  },
-  "slutet45_90": {
-    70: 86.24,
-    95: 117.04,
-    120: 147.84,
-    145: 159.5,
-    170: 187,
-    195: 214.5,
-    200: 220,
-    220: 242,
-    250: 275,
-    300: 330,
-    350: 385,
-    400: 440,
-    450: 495,
-    500: 550,
-    550: 605,
-    600: 660,
-    650: 715,
-    700: 770,
-    750: 825,
-    800: 880
-  }
-};
+const defaultBrand: Brand = "Hunton";
 
-const defaultThicknessMap: Record<InsulationType, number> = {
-  oppen: 200,
-  slutet0_45: 200,
-  slutet45_90: 70
-};
+const getDefaultType = (brand: Brand): InsulationType =>
+  Object.keys(insulationData[brand].types)[0] as InsulationType;
+
+const getDefaultThickness = (brand: Brand, type: InsulationType): number =>
+  insulationData[brand].types[type]?.defaultThickness || 0;
 
 export default function BerakningsFormular() {
+  const initialType = getDefaultType(defaultBrand);
   const [rows, setRows] = useState<Row[]>([
-    { insulationType: "oppen", thickness: 200, area: 0 }
+    {
+      brand: defaultBrand,
+      insulationType: initialType,
+      thickness: getDefaultThickness(defaultBrand, initialType),
+      area: 0,
+    },
   ]);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [result, setResult] = useState<null | {
-    bruttopris: number;
-    rabatt: number;
-    totaltExklMoms: number;
-    totaltInklMoms: number;
-  }>(null);
+  const [result, setResult] = useState<
+    | null
+    | {
+        bruttopris: number;
+        rabatt: number;
+        totaltExklMoms: number;
+        totaltInklMoms: number;
+        totalVolume: number;
+        totalWeight: number;
+      }
+  >(null);
 
   const addRow = () => {
-    const insulationType: InsulationType = "oppen";
+    const brand = defaultBrand;
+    const type = getDefaultType(brand);
     setRows([
       ...rows,
       {
-        insulationType,
-        thickness: defaultThicknessMap[insulationType],
-        area: 0
-      }
+        brand,
+        insulationType: type,
+        thickness: getDefaultThickness(brand, type),
+        area: 0,
+      },
     ]);
   };
 
@@ -114,30 +83,49 @@ export default function BerakningsFormular() {
         i === index
           ? {
               ...row,
-              [field]: field === "area" || field === "thickness" ? Number(value) : value
+              [field]: field === "area" || field === "thickness" ? Number(value) : value,
             }
           : row
       )
     );
   };
 
-  const getPrice = (type: InsulationType, thickness: number): number => {
-    return priceData[type]?.[thickness] || 0;
+  const getPrice = (
+    brand: Brand,
+    type: InsulationType,
+    thickness: number
+  ): number => {
+    return (
+      insulationData[brand]?.types[type]?.thicknessPrices[thickness] || 0
+    );
   };
 
   const calculate = () => {
     let bruttopris = 0;
+    let totalVolume = 0;
+    let totalWeight = 0;
 
     rows.forEach((row) => {
-      const price = getPrice(row.insulationType, row.thickness);
+      const price = getPrice(row.brand, row.insulationType, row.thickness);
       bruttopris += row.area * price;
+      const volume = row.area * (row.thickness / 1000);
+      totalVolume += volume;
+      const density = insulationData[row.brand].density;
+      totalWeight += volume * density;
     });
 
     const rabatt = bruttopris * (discountPercent / 100);
     const totaltExklMoms = bruttopris - rabatt;
     const totaltInklMoms = totaltExklMoms * 1.25;
 
-    setResult({ bruttopris, rabatt, totaltExklMoms, totaltInklMoms });
+    setResult({
+      bruttopris,
+      rabatt,
+      totaltExklMoms,
+      totaltInklMoms,
+      totalVolume,
+      totalWeight,
+    });
   };
 
   return (
@@ -147,7 +135,11 @@ export default function BerakningsFormular() {
           <h2 className="text-2xl font-bold">Beräkningsformulär för Lösullsisolering</h2>
 
           {rows.map((row, index) => {
-            const pricePerM2 = getPrice(row.insulationType, row.thickness);
+            const pricePerM2 = getPrice(
+              row.brand,
+              row.insulationType,
+              row.thickness
+            );
             const isValid = pricePerM2 > 0;
             const delpris = row.area * pricePerM2;
 
@@ -161,27 +153,57 @@ export default function BerakningsFormular() {
                   Ta bort
                 </Button>
                 <div>
+                  <Label>Varumärke</Label>
+                  <Select
+                    onValueChange={(val) => {
+                      const brand = val as Brand;
+                      const type = getDefaultType(brand);
+                      updateRow(index, "brand", brand);
+                      updateRow(index, "insulationType", type);
+                      updateRow(
+                        index,
+                        "thickness",
+                        getDefaultThickness(brand, type)
+                      );
+                    }}
+                    value={row.brand}
+                  >
+                    <SelectTrigger>
+                      <span>{row.brand}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(insulationData).map((b) => (
+                        <SelectItem key={b} value={b}>
+                          {b}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Label>Typ av isolering</Label>
                   <Select
                     onValueChange={(val) => {
-                      updateRow(index, "insulationType", val as InsulationType);
-                      updateRow(index, "thickness", defaultThicknessMap[val as InsulationType]);
+                      const type = val as InsulationType;
+                      updateRow(index, "insulationType", type);
+                      updateRow(
+                        index,
+                        "thickness",
+                        getDefaultThickness(row.brand, type)
+                      );
                     }}
                     value={row.insulationType}
                   >
                     <SelectTrigger>
-                      <span>
-                        {row.insulationType === "oppen"
-                          ? "Hunton Öppet Bjälklag"
-                          : row.insulationType === "slutet0_45"
-                          ? "Hunton Slutet 0–45°"
-                          : "Hunton Slutet 45–90°"}
-                      </span>
+                      <span>{getTypeLabel(row.brand, row.insulationType)}</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="oppen">Hunton Öppet Bjälklag</SelectItem>
-                      <SelectItem value="slutet0_45">Hunton Slutet 0–45°</SelectItem>
-                      <SelectItem value="slutet45_90">Hunton Slutet 45–90°</SelectItem>
+                      {Object.keys(insulationData[row.brand].types).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {getTypeLabel(row.brand, t as InsulationType)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -206,18 +228,30 @@ export default function BerakningsFormular() {
                       <span>{row.thickness} mm</span>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(priceData[row.insulationType] || {}).map((t) => (
-                        <SelectItem key={t} value={t}>{t} mm</SelectItem>
+                      {Object.keys(
+                        insulationData[row.brand].types[
+                          row.insulationType
+                        ]?.thicknessPrices || {}
+                      ).map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {t} mm
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <p><strong>Pris per m²:</strong> {pricePerM2.toFixed(2)} kr</p>
+                <p>
+                  <strong>Pris per m²:</strong> {pricePerM2.toFixed(2)} kr
+                </p>
                 {!isValid ? (
-                  <p className="text-red-500 font-semibold">Tjocklek saknar pris i listan</p>
+                  <p className="text-red-500 font-semibold">
+                    Tjocklek saknar pris i listan
+                  </p>
                 ) : (
-                  <p><strong>Delpris:</strong> {delpris.toFixed(2)} kr</p>
+                  <p>
+                    <strong>Delpris:</strong> {delpris.toFixed(2)} kr
+                  </p>
                 )}
               </div>
             );
@@ -244,6 +278,8 @@ export default function BerakningsFormular() {
               <p><strong>Rabatt:</strong> -{result.rabatt.toFixed(2)} kr</p>
               <p><strong>Totalt exkl. moms:</strong> {result.totaltExklMoms.toFixed(2)} kr</p>
               <p><strong>Totalt inkl. moms:</strong> {result.totaltInklMoms.toFixed(2)} kr</p>
+              <p><strong>Total volym:</strong> {result.totalVolume.toFixed(2)} m³</p>
+              <p><strong>Total vikt:</strong> {result.totalWeight.toFixed(2)} kg</p>
             </div>
           )}
         </CardContent>
