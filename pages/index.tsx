@@ -1,5 +1,0 @@
-import BerakningsFormular from "@/components/BerakningsFormular";
-
-export default function Home() {
-  return <BerakningsFormular />;
-}
